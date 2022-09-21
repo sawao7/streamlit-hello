@@ -19,7 +19,7 @@ class resnet18(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.resnet = models.resnet18(pretrained=True)
+        self.resnet = models.resnet18()
         self.fc = nn.Linear(1000, 9)
 
     def forward(self, x):
@@ -29,6 +29,9 @@ class resnet18(nn.Module):
 
 
 model = resnet18()
+param_load = torch.load("model.prm",map_location=torch.device('cpu'))
+model.load_state_dict(param_load)
+model = model.eval()
 
 def pil2cv(image):
     ''' PIL型 -> OpenCV型 '''
