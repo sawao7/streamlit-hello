@@ -1,3 +1,6 @@
 streamlit
 numpy
 Image
+torch
+torchvision
+opencv-python
