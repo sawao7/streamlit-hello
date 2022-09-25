@@ -9,6 +9,7 @@ from torchvision import transforms
 
 import cv2
 import os
+import random
 
 # モデルの読み込み
 class resnet18(nn.Module):
@@ -119,31 +120,36 @@ def judge_member(result):
 def show_image(name):
     image = Image.open("./niziu_images/" + name + ".jpg")
     st.image(
-            image, caption=name,
+            image,
             use_column_width=True
         )
 
 # 変数の定義
 if 'results' not in st.session_state:
-	st.session_state.results = torch.zeros((1, 9))
+    st.session_state.results = torch.zeros((1, 9))
+
+if "list" not in st.session_state:
+    l = list(range(1, 6))
+    random_l = random.sample(l, len(l))
+    st.session_state.list = random_l
+
 
 # レイアウト
 # タイトル
 st.title("Niziuのメンバー判定アプリ")
+
 # 画像とボタンの配置
-for i in range(1,6):
-    print(i)
+for i in st.session_state.list:
     col3, col4 = st.columns(2)
 
     with col3:
         image = opencv_resize_image("./images/0" + str(i) + ".jpg")
         if st.button(label="可愛いと思う", key=i):
-            print("test")
             result = predict_image(image)
             st.session_state.results += result
 
         st.image(
-            image, caption='1',
+            image,
             use_column_width=True
         )
 
@@ -155,15 +161,20 @@ for i in range(1,6):
             st.session_state.results += result
 
         st.image(
-            image, caption='2',
+            image,
             use_column_width=True
         )
 
+    st.write("---------------------------------------------")
 
-if st.button("predict"):
-    st.write("あなたが選んだメンバーは...")
+col1, col2, col3 = st.columns([1,1,1])
+
+
+if col2.button("Judge"):
+    col2.write("あなたが選んだメンバーは...")
     # st.write(st.session_state.results)
     name = judge_member(st.session_state.results)
     # st.write(name)
     show_image(name)
+    col2.title(name)
 
