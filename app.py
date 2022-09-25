@@ -10,11 +10,7 @@ from torchvision import transforms
 import cv2
 import os
 
-
-uploaded_file = st.file_uploader('Choose a image file')
-
-
-
+# モデルの読み込み
 class resnet18(nn.Module):
     def __init__(self):
         super().__init__()
@@ -26,13 +22,13 @@ class resnet18(nn.Module):
         x = self.resnet(x)
         x = self.fc(x)
         return x
-
-
 model = resnet18()
 param_load = torch.load("model.prm",map_location=torch.device('cpu'))
 model.load_state_dict(param_load)
 model = model.eval()
 
+
+# 関数の定義
 def pil2cv(image):
     ''' PIL型 -> OpenCV型 '''
     new_image = np.array(image, dtype=np.uint8)
@@ -57,22 +53,15 @@ def cv2pil(image):
     new_image = Image.fromarray(new_image)
     return new_image
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
+def opencv_resize_image(path):
+    image = Image.open(path)
     image = pil2cv(image)
-
-    # image = cv2.imread(uploaded_file)
-
     if image is None:
-        print("Not open file:")
-
+        print("none")
+        return None
     image_gs = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
     cascade = cv2.CascadeClassifier("./haarcascade_frontalface_alt.xml")
-
-    face_list = cascade.detectMultiScale(
-        image_gs, scaleFactor=1.1, minNeighbors=2, minSize=(64, 64))
-
+    face_list = cascade.detectMultiScale(image_gs, scaleFactor=1.1, minNeighbors=2, minSize=(64, 64))
     if len(face_list) > 0:
         for n, rectangle in enumerate(face_list):
             x, y, width, height = rectangle
@@ -85,55 +74,96 @@ if uploaded_file is not None:
 
                 image = cv2pil(image)
 
-                img_array = np.array(image)
-                # print("test2")
-                # st.image(
-                #     image, caption='upload images',
-                #     use_column_width=True
-                # )
-                transform = transforms.Compose({
-                    transforms.ToTensor()
-                })
-                image = transform(image)
-                # print("test3")
-                image= image.unsqueeze(dim=0)
-                # print("test4")
+                return image
 
-                result = model(image)
-                result = result.softmax(dim=1)
-                # st.write(result)
-                ans = torch.argmax(result)
-                if ans == 0:
-                    name = "AYAKA"
-                elif ans == 1:
-                    name = "MAKO"
-                elif ans == 2:
-                    name = "MAYA"
-                elif ans == 3:
-                    name = "MAYUKA"
-                elif ans == 4:
-                    name = "MIIHI"
-                elif ans == 5:
-                    name = "NINA"
-                elif ans == 6:
-                    name = "RIKU"
-                elif ans == 7:
-                    name = "RIMA"
-                elif ans == 8:
-                    name = "RIO"
-
-                st.write(name)
             except:
-                print(face_list)
-                # print("test")
-
+                print("None")
+                return None
     else:
         print("not found face..")
+        return None
 
-    # image = Image.open(uploaded_file)
-    # img_array = np.array(image)
-    # st.image(
-    #     image, caption='upload images',
-    #     use_column_width=True
-    # )
+def predict_image(image):
+    transform = transforms.Compose({
+                    transforms.ToTensor()
+                })
+    image = transform(image)
+    image = image.unsqueeze(dim=0)
+
+    result = model(image)
+    result = result.softmax(dim=1)
+    return result
+
+def judge_member(result):
+    ans = torch.argmax(result)
+    if ans == 0:
+        name = "AYAKA"
+    elif ans == 1:
+        name = "MAKO"
+    elif ans == 2:
+        name = "MAYA"
+    elif ans == 3:
+        name = "MAYUKA"
+    elif ans == 4:
+        name = "MIIHI"
+    elif ans == 5:
+        name = "NINA"
+    elif ans == 6:
+        name = "RIKU"
+    elif ans == 7:
+        name = "RIMA"
+    elif ans == 8:
+        name = "RIO"
+    return name
+
+def show_image(name):
+    image = Image.open("./niziu_images/" + name + ".jpg")
+    st.image(
+            image, caption=name,
+            use_column_width=True
+        )
+
+# 変数の定義
+if 'results' not in st.session_state:
+	st.session_state.results = torch.zeros((1, 9))
+
+# レイアウト
+# タイトル
+st.title("Niziuのメンバー判定アプリ")
+# 画像とボタンの配置
+for i in range(1,6):
+    print(i)
+    col3, col4 = st.columns(2)
+
+    with col3:
+        image = opencv_resize_image("./images/0" + str(i) + ".jpg")
+        if st.button(label="可愛いと思う", key=i):
+            print("test")
+            result = predict_image(image)
+            st.session_state.results += result
+
+        st.image(
+            image, caption='1',
+            use_column_width=True
+        )
+
+
+    with col4:
+        image = opencv_resize_image("./images/0" + str(i + 5) + ".jpg")
+        if st.button(label="可愛いと思う", key=i+5):
+            result = predict_image(image)
+            st.session_state.results += result
+
+        st.image(
+            image, caption='2',
+            use_column_width=True
+        )
+
+
+if st.button("predict"):
+    st.write("あなたが選んだメンバーは...")
+    # st.write(st.session_state.results)
+    name = judge_member(st.session_state.results)
+    # st.write(name)
+    show_image(name)
 
